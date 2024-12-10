@@ -1,44 +1,49 @@
 import { createClient } from 'redis';
 
 class RedisClient {
-    constructor() {
-        this.client = createClient();
+  constructor() {
+    this.client = createClient();
 
-        this.client.on('error', (error) => {
-            console.error('Redis Client Error:', error);
-        });
+    this.client.on('error', (error) => {
+      console.error('Redis Client Error:', error);
+    });
 
-        this.connected = false; // Track connection status
+    this.client.connect().catch((err) => {
+      console.error('Failed to connect to Redis:', err);
+    });
+  }
 
-        this.client.connect()
-            .then(() => {
-                this.connected = true;
-                console.log('Redis client connected');
-            })
-            .catch((err) => {
-                console.error('Failed to connect to Redis:', err);
-            });
+  isAlive() {
+    return this.client.isReady;
+  }
+
+  async get(key) {
+    try {
+      const value = await this.client.get(key);
+      return value || null; // Explicitly return null if no value
+    } catch (error) {
+      console.error(`Error getting key ${key}:`, error);
+      return null;
     }
+  }
 
-    isAlive() {
-        return this.connected; // Check connection status
+  async set(key, value, duration) {
+    try {
+      await this.client.set(key, value, { EX: duration });
+    } catch (error) {
+      console.error(`Error setting key ${key}:`, error);
     }
+  }
 
-    async get(key) {
-        if (!this.connected) throw new Error('Redis client is not connected');
-        return await this.client.get(key);
+  async del(key) {
+    try {
+      await this.client.del(key);
+    } catch (error) {
+      console.error(`Error deleting key ${key}:`, error);
     }
-
-    async set(key, value, duration) {
-        if (!this.connected) throw new Error('Redis client is not connected');
-        await this.client.set(key, value, { EX: duration });
-    }
-
-    async del(key) {
-        if (!this.connected) throw new Error('Redis client is not connected');
-        await this.client.del(key);
-    }
+  }
 }
 
 const redisClient = new RedisClient();
+
 export default redisClient;
